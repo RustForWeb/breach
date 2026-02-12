@@ -1,0 +1,17 @@
+{
+    "name": "@rustforweb/breach",
+    "description": "HTTP error schema.",
+    "author": "Rust for Web <info@rustforweb.org>",
+    "repository": "github:RustForWeb/breach",
+    "license": "MIT",
+    "private": true,
+    "workspaces": [],
+    "devDependencies": {
+        "prettier": "^3.4.2",
+        "prettier-plugin-sort-json": "^4.1.1"
+    },
+    "engines": {
+        "node": ">=22"
+    },
+    "packageManager": "npm@11.8.0"
+}

@@ -1,0 +1,24 @@
+[package]
+name = "breach-example-axum"
+description = "Breach Axum example."
+publish = false
+
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow = "1.0.101"
+axum = "0.8.8"
+breach.workspace = true
+serde = { workspace = true, features = ["derive"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+utoipa = { version = "5.4.0", features = ["axum_extras", "uuid"] }
+utoipa-axum = "0.2.0"
+utoipa-scalar = { version = "0.3.0", features = ["axum"] }
+uuid = { version = "1.20.0", features = ["serde", "v7"] }
+
+[lints]
+workspace = true

@@ -1,0 +1,28 @@
+[package]
+name = "breach-macros"
+description = "Macros for Breach."
+
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
+
+[lib]
+proc-macro = true
+
+[features]
+default = []
+serde = []
+utoipa = []
+
+[dependencies]
+proc-macro2 = "1.0.103"
+quote = "1.0.42"
+syn = "2.0.110"
+
+[lints]
+workspace = true

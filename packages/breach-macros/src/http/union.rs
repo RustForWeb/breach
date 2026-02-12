@@ -1,0 +1,20 @@
+use proc_macro2::TokenStream;
+use syn::{DataUnion, DeriveInput, Result};
+
+use crate::http::attribute::HttpErrorAttribute;
+
+pub struct HttpErrorUnion {}
+
+impl HttpErrorUnion {
+    pub fn parse(input: &DeriveInput, _data: &DataUnion) -> Result<Self> {
+        Err(syn::Error::new_spanned(input, "union is not supported"))
+    }
+
+    pub fn attribute(&self) -> Option<&HttpErrorAttribute> {
+        None
+    }
+
+    pub fn status(&self) -> TokenStream {
+        todo!()
+    }
+}

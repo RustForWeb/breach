@@ -1,0 +1,24 @@
+[workspace]
+members = ["examples/*", "packages/*"]
+resolver = "2"
+
+[workspace.package]
+authors = ["Rust for Web <info@rustforweb.org>"]
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/RustForWeb/breach"
+version = "0.0.1"
+
+[workspace.dependencies]
+breach = { path = "./packages/breach", version = "0.0.1" }
+breach-macros = { path = "./packages/breach-macros", version = "0.0.1" }
+serde = "1.0.228"
+serde_json = "1.0.149"
+tokio = "1.49.0"
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+panic = "deny"
+unwrap_used = "deny"

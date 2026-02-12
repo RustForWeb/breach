@@ -1,0 +1,25 @@
+[package]
+name = "breach"
+description = "HTTP error schema."
+
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
+
+[features]
+default = ["macros"]
+macros = ["dep:breach-macros"]
+
+[dependencies]
+breach-macros = { workspace = true, optional = true }
+http = "1.4.0"
+
+[dev-dependencies]
+
+[lints]
+workspace = true
