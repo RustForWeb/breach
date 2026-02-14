@@ -3,6 +3,8 @@ mod error;
 mod state;
 mod user;
 
+use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
+
 use anyhow::Result;
 use tokio::net::TcpListener;
 use utoipa_axum::router::OpenApiRouter;
@@ -22,7 +24,10 @@ async fn main() -> Result<()> {
         .merge(Scalar::with_url("/api/reference", openapi))
         .with_state(AppState::default());
 
-    let listener = TcpListener::bind("0.0.0.0:8080").await?;
+    let addr = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 8080));
+    let listener = TcpListener::bind(addr).await?;
+    println!("listening on http://{:?}", addr);
+
     axum::serve(listener, router).await?;
 
     Ok(())
