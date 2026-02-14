@@ -91,8 +91,10 @@ fn merge_content(mut contents: impl ExactSizeIterator<Item = Content>) -> Option
         // TODO: Merge extensions.
     }
 
-    let one_of = one_of_builder.build();
-    if !one_of.items.is_empty() {
+    let mut one_of = one_of_builder.build();
+    if one_of.items.len() == 1 {
+        builder = builder.schema(Some(one_of.items.remove(0)));
+    } else if !one_of.items.is_empty() {
         builder = builder.schema(Some(Schema::from(one_of)));
     }
 
