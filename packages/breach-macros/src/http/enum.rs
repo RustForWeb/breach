@@ -1,8 +1,8 @@
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{ToTokens, quote};
 use syn::{DataEnum, DeriveInput, Error, Field, Fields, Ident, Result, Variant, spanned::Spanned};
 
-use crate::{http::attribute::HttpErrorAttribute, util::Either};
+use crate::http::attribute::HttpErrorAttribute;
 
 pub struct HttpErrorEnum<'a> {
     ident: &'a Ident,
@@ -36,7 +36,27 @@ impl<'a> HttpErrorEnum<'a> {
 
         quote! {
             match &self {
-                #(#arms),*
+                #( #arms ),*
+            }
+        }
+    }
+
+    pub fn responses(&self) -> TokenStream {
+        let mut responses = self
+            .variants
+            .iter()
+            .map(|variant| variant.responses())
+            .collect::<Vec<_>>();
+
+        if responses.is_empty() {
+            quote!(::std::collections::BTreeMap::default())
+        } else if responses.len() == 1 {
+            responses.remove(0)
+        } else {
+            quote! {
+                ::breach::utoipa::merge_responses([
+                    #( #responses ),*
+                ].into_iter())
             }
         }
     }
@@ -46,78 +66,106 @@ pub struct HttpErrorEnumVariant<'a> {
     enum_ident: &'a Ident,
     ident: &'a Ident,
     fields: &'a Fields,
-    attribute_or_field: Either<HttpErrorAttribute, &'a Field>,
+    field: Option<&'a Field>,
+    attribute: Option<HttpErrorAttribute>,
 }
 
 impl<'a> HttpErrorEnumVariant<'a> {
     pub fn parse(enum_ident: &'a Ident, variant: &'a Variant) -> Result<Self> {
-        let attribute_or_field =
-            if let Some(attribute) = HttpErrorAttribute::parse_slice(&variant.attrs)? {
-                Either::Left(attribute)
-            } else {
-                Either::Right(match &variant.fields {
-                    Fields::Named(fields) => {
-                        return Err(Error::new(fields.span(), "named fields are not supported"));
-                    }
-                    Fields::Unnamed(fields) => {
-                        if fields.unnamed.len() > 1 {
-                            return Err(Error::new(
-                                fields.unnamed.span(),
-                                "multiple unnamed fields are not supported",
-                            ));
-                        }
-                        let Some(field) = fields.unnamed.first() else {
-                            return Err(Error::new(
-                                fields.unnamed.span(),
-                                "no unnamed fields are not supported",
-                            ));
-                        };
+        let field = match &variant.fields {
+            Fields::Named(fields) => {
+                return Err(Error::new(fields.span(), "named fields are not supported"));
+            }
+            Fields::Unnamed(fields) => {
+                if fields.unnamed.len() > 1 {
+                    return Err(Error::new(
+                        fields.unnamed.span(),
+                        "multiple unnamed fields are not supported",
+                    ));
+                }
 
-                        field
-                    }
-                    Fields::Unit => {
-                        return Err(Error::new(variant.span(), "unit fields are not supported"));
+                fields.unnamed.first().and_then(|field| {
+                    if field.attrs.iter().any(|attribute| {
+                        if attribute.meta.path().is_ident("serde") {
+                            let mut skip = false;
+
+                            _ = attribute.parse_nested_meta(|meta| {
+                                if meta.path.is_ident("skip") {
+                                    skip = true;
+                                }
+
+                                Ok(())
+                            });
+
+                            skip
+                        } else {
+                            false
+                        }
+                    }) {
+                        None
+                    } else {
+                        Some(field)
                     }
                 })
-            };
+            }
+            Fields::Unit => None,
+        };
 
         Ok(HttpErrorEnumVariant {
             enum_ident,
             ident: &variant.ident,
             fields: &variant.fields,
-            attribute_or_field,
+            field,
+            attribute: HttpErrorAttribute::parse_slice(&variant.attrs)?,
         })
     }
 
     pub fn status(&self) -> TokenStream {
+        self.arm(if let Some(attribute) = &self.attribute {
+            attribute.status()
+        } else if self.field.is_some() {
+            quote!(value.status())
+        } else {
+            quote!(compile_error!("missing `#[http(status = ..)]` attribute"))
+        })
+    }
+
+    pub fn responses(&self) -> TokenStream {
+        if let Some(attribute) = &self.attribute {
+            attribute.responses(self.field.as_ref().map(|field| field.ty.to_token_stream()))
+        } else if let Some(field) = &self.field {
+            let r#type = &field.ty;
+
+            quote!(<#r#type as ::utoipa::IntoResponses>::responses())
+        } else {
+            quote!(compile_error!("missing `#[http(status = ..)]` attribute"))
+        }
+    }
+
+    fn arm(&self, tokens: TokenStream) -> TokenStream {
         let enum_ident = self.enum_ident;
         let ident = self.ident;
-
-        let status = match &self.attribute_or_field {
-            Either::Left(attribute) => attribute.status(),
-            Either::Right(_field) => quote!(value.status()),
-        };
 
         match self.fields {
             Fields::Named(_) => {
                 quote! {
-                    #enum_ident::#ident { .. } => #status
+                    #enum_ident::#ident { .. } => #tokens
                 }
             }
             Fields::Unnamed(fields) => {
-                let idents: Vec<TokenStream> = if self.attribute_or_field.is_right() {
-                    fields.unnamed.iter().map(|_| quote!(value)).collect()
-                } else {
+                let idents: Vec<TokenStream> = if self.attribute.is_some() {
                     fields.unnamed.iter().map(|_| quote!(_)).collect()
+                } else {
+                    fields.unnamed.iter().map(|_| quote!(value)).collect()
                 };
 
                 quote! {
-                    #enum_ident::#ident( #(#idents),* ) => #status
+                    #enum_ident::#ident( #(#idents),* ) => #tokens
                 }
             }
             Fields::Unit => {
                 quote! {
-                    #enum_ident::#ident => #status
+                    #enum_ident::#ident => #tokens
                 }
             }
         }

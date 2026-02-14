@@ -1,9 +1,10 @@
 use breach::HttpError;
 use serde::Serialize;
+use utoipa::ToSchema;
 
 use crate::error::NotFoundError;
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 #[serde(
     tag = "code",
     rename_all = "camelCase",
@@ -14,6 +15,7 @@ pub enum UserValidationError {
 }
 
 #[derive(HttpError, Serialize)]
+#[http(utoipa)]
 #[serde(
     tag = "code",
     rename_all = "camelCase",
@@ -34,6 +36,7 @@ impl From<UserValidationError> for CreateUserError {
 }
 
 #[derive(HttpError, Serialize)]
+#[http(utoipa)]
 #[serde(
     tag = "code",
     rename_all = "camelCase",
@@ -47,6 +50,7 @@ pub enum GetUserByIdError {
 }
 
 #[derive(HttpError, Serialize)]
+#[http(utoipa)]
 #[serde(
     tag = "code",
     rename_all = "camelCase",
@@ -67,6 +71,7 @@ impl From<UserValidationError> for UpdateUserError {
 }
 
 #[derive(HttpError, Serialize)]
+#[http(utoipa)]
 #[serde(
     tag = "code",
     rename_all = "camelCase",

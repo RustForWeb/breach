@@ -3,6 +3,12 @@ use breach::{HttpError, http::StatusCode};
 use serde::Serialize;
 use serde_json::json;
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ForbiddenError {
+    id: String,
+}
+
 #[derive(HttpError, Serialize)]
 #[http(status = NOT_FOUND)]
 #[serde(rename_all = "camelCase")]
@@ -18,9 +24,7 @@ struct NotFoundError {
 )]
 enum GetUserByIdError {
     #[http(status = FORBIDDEN)]
-    Forbidden {
-        id: String,
-    },
+    Forbidden(ForbiddenError),
 
     NotFound(NotFoundError),
 
@@ -37,7 +41,7 @@ enum GetUserByIdError {
 enum UpdateUserError {
     GetUserById(GetUserByIdError),
 
-    #[http(status = UNPROCESSABLE_CONTENT)]
+    #[http(status = UNPROCESSABLE_ENTITY)]
     Validation,
 
     #[http(status = INTERNAL_SERVER_ERROR)]
@@ -45,7 +49,9 @@ enum UpdateUserError {
 }
 
 fn main() {
-    let error = UpdateUserError::GetUserById(GetUserByIdError::Forbidden { id: "1".to_owned() });
+    let error = UpdateUserError::GetUserById(GetUserByIdError::Forbidden(ForbiddenError {
+        id: "1".to_owned(),
+    }));
     assert_eq!(StatusCode::FORBIDDEN, error.status());
     assert_eq!(
         json!({

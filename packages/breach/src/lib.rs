@@ -3,6 +3,8 @@
 //! Breach.
 
 mod error;
+#[cfg(feature = "utoipa")]
+pub mod utoipa;
 
 pub use error::*;
 

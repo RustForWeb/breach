@@ -27,7 +27,7 @@ impl UserRoutes {
 }
 
 #[derive(HttpError, Serialize)]
-#[http(axum)]
+#[http(axum, utoipa)]
 pub enum CreateUserRouteError {
     CreateUser(CreateUserError),
 }
@@ -47,7 +47,8 @@ impl From<CreateUserError> for CreateUserRouteError {
     tags = ["User"],
     request_body = CreateUser,
     responses(
-        (status = CREATED, description = "The user has been created.", body = User)
+        (status = CREATED, description = "The user has been created.", body = User),
+        CreateUserRouteError,
     )
 )]
 async fn create_user(
@@ -60,7 +61,7 @@ async fn create_user(
 }
 
 #[derive(HttpError, Serialize)]
-#[http(axum)]
+#[http(axum, utoipa)]
 pub enum GetUserRouteError {
     GetUserById(GetUserByIdError),
 }
@@ -80,7 +81,8 @@ impl From<GetUserByIdError> for GetUserRouteError {
     tags = ["User"],
     params(UserPathParams),
     responses(
-        (status = OK, description = "The user.", body = User)
+        (status = OK, description = "The user.", body = User),
+        GetUserRouteError,
     )
 )]
 async fn user(
@@ -93,7 +95,7 @@ async fn user(
 }
 
 #[derive(HttpError, Serialize)]
-#[http(axum)]
+#[http(axum, utoipa)]
 pub enum UpdateUserRouteError {
     GetUserById(GetUserByIdError),
 
@@ -122,7 +124,8 @@ impl From<UpdateUserError> for UpdateUserRouteError {
     params(UserPathParams),
     request_body = UpdateUser,
     responses(
-        (status = OK, description = "The user has been updated.", body = User)
+        (status = OK, description = "The user has been updated.", body = User),
+        UpdateUserRouteError,
     )
 )]
 async fn update_user(
@@ -138,7 +141,7 @@ async fn update_user(
 }
 
 #[derive(HttpError, Serialize)]
-#[http(axum)]
+#[http(axum, utoipa)]
 pub enum DeleteUserRouteError {
     GetUserById(GetUserByIdError),
 
@@ -166,7 +169,8 @@ impl From<DeleteUserError> for DeleteUserRouteError {
     tags = ["User"],
     params(UserPathParams),
     responses(
-        (status = NO_CONTENT, description = "The user has been deleted.")
+        (status = NO_CONTENT, description = "The user has been deleted."),
+        DeleteUserRouteError,
     )
 )]
 async fn delete_user(

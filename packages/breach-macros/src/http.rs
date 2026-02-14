@@ -42,17 +42,30 @@ impl<'a> ToTokens for HttpError<'a> {
             }
         });
 
-        if let Some(attribute) = self.data.attribute()
-            && attribute.axum
-        {
-            tokens.append_all(quote! {
-                #[automatically_derived]
-                impl #impl_generics ::axum::response::IntoResponse for #ident #type_generics #where_clause {
-                    fn into_response(self) -> ::axum::response::Response {
-                        (self.status(), Json(self)).into_response()
+        if let Some(attribute) = self.data.attribute() {
+            if attribute.axum {
+                tokens.append_all(quote! {
+                    #[automatically_derived]
+                    impl #impl_generics ::axum::response::IntoResponse for #ident #type_generics #where_clause {
+                        fn into_response(self) -> ::axum::response::Response {
+                            (self.status(), Json(self)).into_response()
+                        }
                     }
-                }
-            });
+                });
+            }
+
+            if attribute.utoipa {
+                let responses = self.data.responses();
+
+                tokens.append_all(quote! {
+                    #[automatically_derived]
+                    impl #impl_generics ::utoipa::IntoResponses for #ident #type_generics #where_clause {
+                        fn responses() -> ::std::collections::BTreeMap<String, ::utoipa::openapi::RefOr<::utoipa::openapi::response::Response>> {
+                            #responses
+                        }
+                    }
+                });
+            }
         }
     }
 }

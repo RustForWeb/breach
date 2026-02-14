@@ -1,9 +1,10 @@
 use breach::HttpError;
 use serde::Serialize;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(HttpError, Serialize)]
-#[http(status = NOT_FOUND)]
+#[derive(HttpError, Serialize, ToSchema)]
+#[http(status = NOT_FOUND, utoipa)]
 #[serde(rename_all = "camelCase")]
 pub struct NotFoundError {
     id: Uuid,
