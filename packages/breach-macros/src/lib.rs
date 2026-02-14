@@ -3,7 +3,7 @@
 //! Breach macros.
 
 mod http;
-mod util;
+mod status;
 
 use proc_macro::TokenStream;
 use quote::ToTokens;

@@ -1,10 +1,13 @@
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{Attribute, Error, Ident, Result, spanned::Spanned};
+use syn::{Attribute, Error, Result, spanned::Spanned};
+
+use crate::status::Status;
 
 pub struct HttpErrorAttribute {
-    status: Option<Ident>,
+    pub status: Option<Status>,
     pub axum: bool,
+    pub utoipa: bool,
 }
 
 impl<'a> HttpErrorAttribute {
@@ -32,6 +35,7 @@ impl<'a> HttpErrorAttribute {
     pub fn parse(attribute: &'a Attribute) -> Result<Self> {
         let mut status = None;
         let mut axum = false;
+        let mut utoipa = false;
 
         attribute.parse_nested_meta(|meta| {
             if meta.path.is_ident("status") {
@@ -42,20 +46,59 @@ impl<'a> HttpErrorAttribute {
                 axum = true;
 
                 Ok(())
+            } else if meta.path.is_ident("utoipa") {
+                utoipa = true;
+
+                Ok(())
             } else {
                 Err(meta.error("unknown parameter"))
             }
         })?;
 
-        Ok(Self { status, axum })
+        Ok(Self {
+            status,
+            axum,
+            utoipa,
+        })
     }
 
     pub fn status(&self) -> TokenStream {
         if let Some(status) = &self.status {
-            if status == "UNPROCESSABLE_CONTENT" {
-                quote!(::breach::http::StatusCode::UNPROCESSABLE_ENTITY)
-            } else {
-                quote!(::breach::http::StatusCode::#status)
+            let status = status.as_ident();
+
+            quote!(::breach::http::StatusCode::#status)
+        } else {
+            quote!(compile_error!("missing `#[http(status = ..)]` attribute"))
+        }
+    }
+
+    pub fn responses(&self, r#type: Option<TokenStream>) -> TokenStream {
+        if let Some(status) = &self.status {
+            let code = status.code.as_str();
+
+            let content = r#type.map(|r#type| {
+                // TODO: Attempt to infer content type from schema?
+                quote! {
+                    .content(
+                        "application/json",
+                        ::utoipa::openapi::content::ContentBuilder::new()
+                            .schema(Some(<#r#type as ::utoipa::PartialSchema>::schema()))
+                            .build()
+                    )
+                }
+            });
+
+            quote! {
+                ::std::collections::BTreeMap::from_iter([
+                    (
+                        #code.to_owned(),
+                        ::utoipa::openapi::RefOr::T(
+                            ::utoipa::openapi::response::ResponseBuilder::new()
+                                #content
+                                .build()
+                        ),
+                    ),
+                ])
             }
         } else {
             quote!(compile_error!("missing `#[http(status = ..)]` attribute"))

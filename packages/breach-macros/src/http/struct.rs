@@ -1,4 +1,5 @@
 use proc_macro2::TokenStream;
+use quote::quote;
 use syn::{DataStruct, DeriveInput, Error, Result, spanned::Spanned};
 
 use crate::http::attribute::HttpErrorAttribute;
@@ -22,5 +23,9 @@ impl<'a> HttpErrorStruct {
 
     pub fn status(&self) -> TokenStream {
         self.attribute.status()
+    }
+
+    pub fn responses(&self) -> TokenStream {
+        self.attribute.responses(Some(quote!(Self)))
     }
 }
