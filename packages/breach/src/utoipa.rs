@@ -16,47 +16,72 @@ pub fn merge_responses(
         .flatten()
         .chunk_by(|(code, _)| code.clone())
         .into_iter()
-        .map(|(code, chunk)| {
+        .filter_map(|(code, chunk)| {
             let response = merge_response(
                 StatusCode::from_bytes(code.as_bytes()).expect("valid status code"),
                 chunk.map(|(_, response)| response),
             );
 
-            (code, RefOr::T(response))
+            response.map(|response| (code, RefOr::T(response)))
         })
         .collect()
 }
 
 /// Merge multiple [`RefOr<Response>`] into a single [`Response`].
-fn merge_response(code: StatusCode, responses: impl Iterator<Item = RefOr<Response>>) -> Response {
-    let responses = responses.filter_map(|response| match response {
-        RefOr::Ref(_) => None,
-        RefOr::T(response) => Some(response),
-    });
+fn merge_response(
+    code: StatusCode,
+    responses: impl Iterator<Item = RefOr<Response>>,
+) -> Option<Response> {
+    let mut responses = responses
+        .filter_map(|response| match response {
+            RefOr::Ref(_) => None,
+            RefOr::T(response) => Some(response),
+        })
+        .collect::<Vec<_>>();
 
     let mut builder = ResponseBuilder::new();
+
+    if responses.is_empty() {
+        return None;
+    } else if responses.len() == 1 {
+        return Some(responses.remove(0));
+    }
 
     if let Some(canonical_reason) = code.canonical_reason() {
         builder = builder.description(canonical_reason)
     }
 
     builder = responses
+        .into_iter()
         .flat_map(|response| response.content)
         .chunk_by(|(content_type, _)| content_type.clone())
         .into_iter()
         .fold(builder, |builder, (content_type, chunk)| {
-            let content = merge_content(chunk.map(|(_, content)| content));
+            let content = merge_content(
+                chunk
+                    .map(|(_, content)| content)
+                    .collect::<Vec<_>>()
+                    .into_iter(),
+            );
 
             // TODO: Merge content.
-            builder.content(content_type, content)
+            if let Some(content) = content {
+                builder.content(content_type, content)
+            } else {
+                builder
+            }
         });
 
     // TODO: Merge headers, extensions, links.
 
-    builder.build()
+    Some(builder.build())
 }
 
-fn merge_content(contents: impl Iterator<Item = Content>) -> Content {
+fn merge_content(mut contents: impl ExactSizeIterator<Item = Content>) -> Option<Content> {
+    if contents.len() <= 1 {
+        return contents.next();
+    }
+
     let mut builder = ContentBuilder::new();
     let mut one_of_builder = OneOfBuilder::new();
 
@@ -83,5 +108,5 @@ fn merge_content(contents: impl Iterator<Item = Content>) -> Content {
         builder = builder.schema(Some(Schema::from(one_of)));
     }
 
-    builder.build()
+    Some(builder.build())
 }
