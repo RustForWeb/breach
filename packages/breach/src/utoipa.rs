@@ -16,36 +16,25 @@ pub fn merge_responses(
         .flatten()
         .chunk_by(|(code, _)| code.clone())
         .into_iter()
-        .filter_map(|(code, chunk)| {
+        .map(|(code, chunk)| {
             let response = merge_response(
                 StatusCode::from_bytes(code.as_bytes()).expect("valid status code"),
                 chunk.map(|(_, response)| response),
             );
 
-            response.map(|response| (code, RefOr::T(response)))
+            (code, RefOr::T(response))
         })
         .collect()
 }
 
 /// Merge multiple [`RefOr<Response>`] into a single [`Response`].
-fn merge_response(
-    code: StatusCode,
-    responses: impl Iterator<Item = RefOr<Response>>,
-) -> Option<Response> {
-    let mut responses = responses
-        .filter_map(|response| match response {
-            RefOr::Ref(_) => None,
-            RefOr::T(response) => Some(response),
-        })
-        .collect::<Vec<_>>();
+fn merge_response(code: StatusCode, responses: impl Iterator<Item = RefOr<Response>>) -> Response {
+    let responses = responses.filter_map(|response| match response {
+        RefOr::Ref(_) => None,
+        RefOr::T(response) => Some(response),
+    });
 
     let mut builder = ResponseBuilder::new();
-
-    if responses.is_empty() {
-        return None;
-    } else if responses.len() == 1 {
-        return Some(responses.remove(0));
-    }
 
     if let Some(canonical_reason) = code.canonical_reason() {
         builder = builder.description(canonical_reason)
@@ -64,7 +53,6 @@ fn merge_response(
                     .into_iter(),
             );
 
-            // TODO: Merge content.
             if let Some(content) = content {
                 builder.content(content_type, content)
             } else {
@@ -74,7 +62,7 @@ fn merge_response(
 
     // TODO: Merge headers, extensions, links.
 
-    Some(builder.build())
+    builder.build()
 }
 
 fn merge_content(mut contents: impl ExactSizeIterator<Item = Content>) -> Option<Content> {
@@ -97,7 +85,7 @@ fn merge_content(mut contents: impl ExactSizeIterator<Item = Content>) -> Option
         }
 
         if let Some(schema) = content.schema {
-            one_of_builder = one_of_builder.item(schema);
+            one_of_builder = merge_into_one_of_builder(one_of_builder, schema);
         }
 
         // TODO: Merge extensions.
@@ -109,4 +97,20 @@ fn merge_content(mut contents: impl ExactSizeIterator<Item = Content>) -> Option
     }
 
     Some(builder.build())
+}
+
+fn merge_into_one_of_builder(mut builder: OneOfBuilder, schema: RefOr<Schema>) -> OneOfBuilder {
+    if let RefOr::T(schema) = schema {
+        if let Schema::OneOf(one_of) = schema {
+            for item in one_of.items {
+                builder = merge_into_one_of_builder(builder, item);
+            }
+
+            builder
+        } else {
+            builder.item(RefOr::T(schema))
+        }
+    } else {
+        builder.item(schema)
+    }
 }
