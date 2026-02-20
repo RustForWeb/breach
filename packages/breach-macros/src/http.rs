@@ -48,7 +48,7 @@ impl<'a> ToTokens for HttpError<'a> {
                     #[automatically_derived]
                     impl #impl_generics ::axum::response::IntoResponse for #ident #type_generics #where_clause {
                         fn into_response(self) -> ::axum::response::Response {
-                            (self.status(), Json(self)).into_response()
+                            (self.status(), ::axum::Json(self)).into_response()
                         }
                     }
                 });
