@@ -42,10 +42,15 @@ impl<'a> HttpErrorEnum<'a> {
     }
 
     pub fn responses(&self) -> TokenStream {
-        let mut responses = self
-            .variants
-            .iter()
-            .map(|variant| variant.responses())
+        let base = self
+            .attribute
+            .as_ref()
+            .and_then(|attribute| attribute.base.as_ref())
+            .map(|r#type| quote!(<#r#type as ::utoipa::IntoResponses>::responses()));
+
+        let mut responses = base
+            .into_iter()
+            .chain(self.variants.iter().map(|variant| variant.responses()))
             .collect::<Vec<_>>();
 
         if responses.is_empty() {
