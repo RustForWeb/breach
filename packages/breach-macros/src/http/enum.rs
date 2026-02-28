@@ -65,6 +65,19 @@ impl<'a> HttpErrorEnum<'a> {
             }
         }
     }
+
+    pub fn hook(&self) -> TokenStream {
+        let hook = self.attribute.as_ref().map(|attribute| attribute.hook());
+        let arms = self.variants.iter().map(|variant| variant.hook());
+
+        quote! {
+            #hook
+
+            match &self {
+                #( #arms ), *
+            }
+        }
+    }
 }
 
 pub struct HttpErrorEnumVariant<'a> {
@@ -145,6 +158,16 @@ impl<'a> HttpErrorEnumVariant<'a> {
         } else {
             quote!(compile_error!("missing `#[http(status = ..)]` attribute"))
         }
+    }
+
+    pub fn hook(&self) -> TokenStream {
+        self.arm(if self.attribute.is_none() && self.field.is_some() {
+            quote!({
+                value.hook();
+            })
+        } else {
+            quote!({})
+        })
     }
 
     fn arm(&self, tokens: TokenStream) -> TokenStream {

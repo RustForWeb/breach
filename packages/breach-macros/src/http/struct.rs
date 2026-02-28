@@ -28,4 +28,8 @@ impl<'a> HttpErrorStruct {
     pub fn responses(&self) -> TokenStream {
         self.attribute.responses(Some(quote!(Self)))
     }
+
+    pub fn hook(&self) -> TokenStream {
+        self.attribute.hook()
+    }
 }
