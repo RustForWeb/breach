@@ -32,6 +32,7 @@ impl<'a> ToTokens for HttpError<'a> {
         let (impl_generics, type_generics, where_clause) = self.generics.split_for_impl();
 
         let status = self.data.status();
+        let hook = self.data.hook();
 
         tokens.append_all(quote! {
             #[automatically_derived]
@@ -39,22 +40,20 @@ impl<'a> ToTokens for HttpError<'a> {
                 fn status(&self) -> ::breach::http::StatusCode {
                     #status
                 }
+
+                fn hook(&self) {
+                    #hook
+                }
             }
         });
 
         if let Some(attribute) = self.data.attribute() {
             if attribute.axum {
-                let hook = attribute.axum_hook.as_ref().map(|hook| {
-                    quote! {
-                        #hook(&self);
-                    }
-                });
-
                 tokens.append_all(quote! {
                     #[automatically_derived]
                     impl #impl_generics ::axum::response::IntoResponse for #ident #type_generics #where_clause {
                         fn into_response(self) -> ::axum::response::Response {
-                            #hook;
+                            self.hook();
 
                             (self.status(), ::axum::Json(self)).into_response()
                         }

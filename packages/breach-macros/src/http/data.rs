@@ -44,4 +44,12 @@ impl<'a> HttpErrorData<'a> {
             HttpErrorData::Union(r#union) => r#union.responses(),
         }
     }
+
+    pub fn hook(&self) -> TokenStream {
+        match self {
+            HttpErrorData::Struct(r#struct) => r#struct.hook(),
+            HttpErrorData::Enum(r#enum) => r#enum.hook(),
+            HttpErrorData::Union(r#union) => r#union.hook(),
+        }
+    }
 }

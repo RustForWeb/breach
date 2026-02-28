@@ -21,4 +21,8 @@ impl HttpErrorUnion {
     pub fn responses(&self) -> TokenStream {
         todo!()
     }
+
+    pub fn hook(&self) -> TokenStream {
+        todo!()
+    }
 }

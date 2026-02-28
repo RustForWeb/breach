@@ -58,8 +58,8 @@ impl<'a> HttpErrorAttribute {
 pub struct HttpErrorDataAttribute {
     pub status: Option<Status>,
     pub base: Option<Type>,
+    pub hook: Option<Expr>,
     pub axum: bool,
-    pub axum_hook: Option<Expr>,
     pub utoipa: bool,
 }
 
@@ -88,8 +88,8 @@ impl<'a> HttpErrorDataAttribute {
     pub fn parse(attribute: &'a Attribute) -> Result<Self> {
         let mut status = None;
         let mut base = None;
+        let mut hook = None;
         let mut axum = false;
-        let mut axum_hook = None;
         let mut utoipa = false;
 
         attribute.parse_nested_meta(|meta| {
@@ -101,12 +101,12 @@ impl<'a> HttpErrorDataAttribute {
                 base = Some(meta.value()?.parse()?);
 
                 Ok(())
-            } else if meta.path.is_ident("axum") {
-                axum = true;
+            } else if meta.path.is_ident("hook") {
+                hook = Some(meta.value()?.parse()?);
 
                 Ok(())
-            } else if meta.path.is_ident("axum_hook") {
-                axum_hook = Some(meta.value()?.parse()?);
+            } else if meta.path.is_ident("axum") {
+                axum = true;
 
                 Ok(())
             } else if meta.path.is_ident("utoipa") {
@@ -121,8 +121,8 @@ impl<'a> HttpErrorDataAttribute {
         Ok(Self {
             status,
             base,
+            hook,
             axum,
-            axum_hook,
             utoipa,
         })
     }
@@ -133,6 +133,16 @@ impl<'a> HttpErrorDataAttribute {
 
     pub fn responses(&self, r#type: Option<TokenStream>) -> TokenStream {
         responses(self.status.as_ref(), r#type)
+    }
+
+    pub fn hook(&self) -> TokenStream {
+        if let Some(hook) = &self.hook {
+            quote! {
+                #hook(&self);
+            }
+        } else {
+            TokenStream::new()
+        }
     }
 }
 
