@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 use syn::{Data, DeriveInput, Result};
 
 use crate::http::{
-    attribute::HttpErrorAttribute, r#enum::HttpErrorEnum, r#struct::HttpErrorStruct,
+    attribute::HttpErrorDataAttribute, r#enum::HttpErrorEnum, r#struct::HttpErrorStruct,
     union::HttpErrorUnion,
 };
 
@@ -21,7 +21,7 @@ impl<'a> HttpErrorData<'a> {
         })
     }
 
-    pub fn attribute(&self) -> Option<&HttpErrorAttribute> {
+    pub fn attribute(&self) -> Option<&HttpErrorDataAttribute> {
         match self {
             HttpErrorData::Struct(r#struct) => r#struct.attribute(),
             HttpErrorData::Enum(r#enum) => r#enum.attribute(),
