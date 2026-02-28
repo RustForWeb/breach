@@ -2,12 +2,12 @@ use proc_macro2::TokenStream;
 use quote::{ToTokens, quote};
 use syn::{DataEnum, DeriveInput, Error, Field, Fields, Ident, Result, Variant, spanned::Spanned};
 
-use crate::http::attribute::HttpErrorAttribute;
+use crate::http::attribute::{HttpErrorAttribute, HttpErrorDataAttribute};
 
 pub struct HttpErrorEnum<'a> {
     ident: &'a Ident,
     variants: Vec<HttpErrorEnumVariant<'a>>,
-    attribute: Option<HttpErrorAttribute>,
+    attribute: Option<HttpErrorDataAttribute>,
 }
 
 impl<'a> HttpErrorEnum<'a> {
@@ -15,7 +15,7 @@ impl<'a> HttpErrorEnum<'a> {
         let mut result = HttpErrorEnum {
             ident: &input.ident,
             variants: Vec::with_capacity(data.variants.len()),
-            attribute: HttpErrorAttribute::parse_slice(&input.attrs)?,
+            attribute: HttpErrorDataAttribute::parse_slice(&input.attrs)?,
         };
 
         for variant in &data.variants {
@@ -27,7 +27,7 @@ impl<'a> HttpErrorEnum<'a> {
         Ok(result)
     }
 
-    pub fn attribute(&self) -> Option<&HttpErrorAttribute> {
+    pub fn attribute(&self) -> Option<&HttpErrorDataAttribute> {
         self.attribute.as_ref()
     }
 

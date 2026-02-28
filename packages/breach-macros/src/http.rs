@@ -44,10 +44,18 @@ impl<'a> ToTokens for HttpError<'a> {
 
         if let Some(attribute) = self.data.attribute() {
             if attribute.axum {
+                let hook = attribute.axum_hook.as_ref().map(|hook| {
+                    quote! {
+                        #hook(&self);
+                    }
+                });
+
                 tokens.append_all(quote! {
                     #[automatically_derived]
                     impl #impl_generics ::axum::response::IntoResponse for #ident #type_generics #where_clause {
                         fn into_response(self) -> ::axum::response::Response {
+                            #hook;
+
                             (self.status(), ::axum::Json(self)).into_response()
                         }
                     }
