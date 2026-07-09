@@ -102,8 +102,8 @@ impl<'a> HttpErrorEnumVariant<'a> {
                     ));
                 }
 
-                fields.unnamed.first().and_then(|field| {
-                    if field.attrs.iter().any(|attribute| {
+                fields.unnamed.first().filter(|&field| {
+                    !field.attrs.iter().any(|attribute| {
                         if attribute.meta.path().is_ident("serde") {
                             let mut skip = false;
 
@@ -119,11 +119,7 @@ impl<'a> HttpErrorEnumVariant<'a> {
                         } else {
                             false
                         }
-                    }) {
-                        None
-                    } else {
-                        Some(field)
-                    }
+                    })
                 })
             }
             Fields::Unit => None,
